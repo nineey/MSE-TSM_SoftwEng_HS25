@@ -1,0 +1,13 @@
+# repository root pipeline file for GitLab
+# copy this file into the gitlab repository root folder
+
+image: docker:cli
+
+stages:
+  - build
+  - test
+  - deploy
+
+include:
+  - local: '.gitlab/.gitlab-ci_dind.yml'    # using GitLab with docker-in-docker
+#  - local: '.gitlab/.gitlab-ci_image.yml' # using GitLab with image from https://hub.docker.com/

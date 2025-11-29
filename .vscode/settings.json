@@ -1,0 +1,9 @@
+{
+    "cmake.options.statusBarVisibility": "visible",
+    "cmake.buildBeforeRun": true,
+    "cmake.configureOnOpen": false,
+    "cmake.useCMakePresets": "always",
+    "gcovViewer.buildDirectories": [
+        "/workspace/build/Debug/srcLib/CMakeFiles/srcLib.dir"
+    ]
+}

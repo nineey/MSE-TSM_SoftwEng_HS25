@@ -1,0 +1,46 @@
+# example CI/CD pipeline with GitLab
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - test
+  - deploy
+
+variables:
+  IMAGE_NAME_PICO: "erichstyger/cicd_raspberry_pico_sdk_2.0.0-image:latest"
+  GIT_SUBMODULE_STRATEGY: recursive
+
+build-blinky:
+    stage: build
+    when: manual
+    image: 
+      name: $IMAGE_NAME_PICO
+      entrypoint: [""]
+    script:
+      - cmake --preset Debug
+      - cmake --build --preset app-debug
+      - cmake --preset Release
+      - cmake --build --preset app-release
+      - cmake --preset Test
+      - cmake --build --preset app-test
+    artifacts:
+        when: on_success
+        paths:
+        - build/Release/TSM_PicoW_Blinky.elf
+        - build/Release/TSM_PicoW_Blinky.bin
+        - build/Release/TSM_PicoW_Blinky.uf2
+
+unit-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  when: manual
+  script:
+    - echo "Running unit tests... This will take about 60 seconds."
+    - sleep 60
+    - echo "Code coverage is 90%"
+
+deploy-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  when: manual
+  environment: production
+  script:
+    - echo "Deploying application..."
+    - echo "Application successfully deployed."

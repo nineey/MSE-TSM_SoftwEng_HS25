@@ -1,0 +1,63 @@
+# Example CI/CD pipeline to build, test and deploy the project, using docker-in-docker (dind)
+# The docker and script files assume that the project root folder is the root folder in the repository.
+
+variables:
+  PROJECT: "."  # variable pointing to the project directory in the GitLab virtual environment, where this project is cloned
+
+firmware-build:
+  stage: build
+  when: manual              # build needs to be triggered manually
+  #rules:
+  #  - if: $CI_COMMIT_TAG  # only when tag is created
+  services:
+    - docker:dind            # using docker-in-docker
+  artifacts:
+    when: on_success
+    paths:                   # we map the project as volume in to the container, build it, and have that way the artifact files here 
+      - build/Release/*.elf
+      - build/Release/*.uf2
+      - build/Release/*.bin
+      #- doxy/html/*
+  script:
+    # cwd is the repo root. The current project contains the content of our git repo
+    - cp .gitlab/Dockerfile .           # copy Dockerfile for building container
+    - cp .gitlab/build.sh .             # copy build script into project root
+    - chmod +x build.sh                 # make it executable
+    - docker build -t fw-image .        # build the firmware image. Our project is in /project inside the container
+    - docker run -v ./:/project/repo fw-image -c "cd /project/repo && ./build.sh" # Mount current (gitlab) folder with -v as /project/repo folder into container, then run script
+
+firmware-test:
+  stage: test
+  when: manual              # build needs to be triggered manually
+  #only:
+  #  changes:
+  #    - firmware/**/*
+  services:
+    - docker:dind
+  artifacts:
+    paths:
+      - build/Test/*.uf2
+  script:
+    #- cd firmware/
+    #- docker build -t firmware .
+    #- docker run -v ./:/project/source -e PICO_SEGGER_IP=$PICO_SEGGER_IP firmware sh -c './test.sh'
+    - cp .gitlab/Dockerfile .           # copy Dockerfile for building container
+    - cp .gitlab/test.sh .              # copy build script into project root
+    - chmod +x test.sh                  # make it executable
+    - docker build -t fw-image .        # build the firmware image. Our project is in /project inside the container
+    - docker run -v ./:/project/repo fw-image -c "cd /project/repo && ./test.sh" # Mount current (gitlab) folder with -v as /project/repo folder into container, then run script
+
+firmware-deploy:
+  stage: deploy
+  when: manual              # build needs to be triggered manually
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  #rules:
+  #  - if: $CI_COMMIT_TAG  # only when tag is created
+  script:
+    - echo "running firmware deployment"
+  needs:
+    - job: firmware-build
+      artifacts: true
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    description: '$CI_COMMIT_TAG'
